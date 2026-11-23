@@ -1,0 +1,228 @@
+@baseUrl = http://localhost:5285
+@authToken = {{login.response.body.token}}
+
+### 1. Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 2.1 Register User
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "password": "Password123!",
+  "firstName": "John",
+  "lastName": "Smith",
+  "phone": "9876543210"
+}
+
+### 2.2 Login User
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "Password123!"
+}
+
+### 3.1 Get Categories
+GET {{baseUrl}}/api/categories
+Accept: application/json
+
+### 3.2 Get Publishers (Brands)
+GET {{baseUrl}}/api/publishers
+Accept: application/json
+
+### 4.1 Search Books
+GET {{baseUrl}}/api/books?search=Minimalism&sort=Relevance&page=1&pageSize=12
+Accept: application/json
+
+### 4.2 Filter Books by Category and Format
+GET {{baseUrl}}/api/books?categoryId=7&format=Paperback&minPrice=100&maxPrice=500
+Accept: application/json
+
+### 4.3 Get Recommended Books
+GET {{baseUrl}}/api/books/recommended
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 4.4 Get Bestsellers this Month
+GET {{baseUrl}}/api/books/bestsellers
+Accept: application/json
+
+### 4.5 Get New Launches
+GET {{baseUrl}}/api/books/new-launches
+Accept: application/json
+
+### 5. Get Book Detail by ID
+GET {{baseUrl}}/api/books/1
+Accept: application/json
+
+### 6.1 Get Book Reviews
+GET {{baseUrl}}/api/books/1/reviews
+Accept: application/json
+
+### 6.2 Leave a Review (Max 100 chars, Rating 1-5)
+POST {{baseUrl}}/api/books/1/reviews
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "text": "Inspiring and practical guide to decluttering mind and space."
+}
+
+### 7.1 Add Book to Wishlist
+PUT {{baseUrl}}/api/wishlist/1
+Authorization: Bearer {{authToken}}
+
+### 7.2 Get My Wishlist
+GET {{baseUrl}}/api/wishlist
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 7.3 Remove Book from Wishlist
+DELETE {{baseUrl}}/api/wishlist/1
+Authorization: Bearer {{authToken}}
+
+### 8.1 Follow Author (My Writers)
+PUT {{baseUrl}}/api/me/writers/1
+Authorization: Bearer {{authToken}}
+
+### 8.2 Get Followed Authors (My Writers)
+GET {{baseUrl}}/api/me/writers
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 9.1 Add Item to Cart
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "quantity": 1
+}
+
+### 9.2 Add Second Item to Cart
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "bookId": 4,
+  "quantity": 1
+}
+
+### 9.3 Get Shopping Cart
+GET {{baseUrl}}/api/cart
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 9.4 Update Cart Item Quantity
+PUT {{baseUrl}}/api/cart/items/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+
+### 9.5 Apply Coupon Code
+POST {{baseUrl}}/api/cart/coupon
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "couponCode": "SAVE100"
+}
+
+### 10.1 Get Saved Addresses
+GET {{baseUrl}}/api/addresses
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 10.2 Create New Address
+POST {{baseUrl}}/api/addresses
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "testuser@example.com",
+  "line1": "Flat 402, Green Heights",
+  "line2": "MG Road",
+  "city": "Mumbai",
+  "pin": "400001",
+  "state": "Maharashtra",
+  "country": "India",
+  "phoneCountryCode": "+91",
+  "phone": "9876543210",
+  "isSaved": true
+}
+
+### 11. Checkout / Place Order
+# @name placeOrder
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "addressId": 1,
+  "couponCode": "SAVE100",
+  "giftPointsToRedeem": 50
+}
+
+### 12.1 Process Mock Payment (Credit Card - Succeeded)
+POST {{baseUrl}}/api/orders/1/payments
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "method": "CreditCard",
+  "cardNumber": "4111-1111-1111-1234",
+  "nameOnCard": "John Smith",
+  "cvv": "123",
+  "expiryMonthYear": "12/2028"
+}
+
+### 12.2 Process Mock Payment (Card Ending in 0000 - Declined)
+POST {{baseUrl}}/api/orders/1/payments
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "method": "CreditCard",
+  "cardNumber": "4111-1111-1111-0000",
+  "nameOnCard": "John Smith",
+  "cvv": "123",
+  "expiryMonthYear": "12/2028"
+}
+
+### 13.1 Get Order History (My Orders)
+GET {{baseUrl}}/api/orders
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 13.2 Get Order Details by ID
+GET {{baseUrl}}/api/orders/1
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 14. Get Gift Points Summary
+GET {{baseUrl}}/api/me/gift-points
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 15. Cancel Order (Within 48h limit)
+POST {{baseUrl}}/api/orders/1/cancel
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 16. Buy Again (Re-add past order items to cart)
+POST {{baseUrl}}/api/orders/1/buy-again
+Authorization: Bearer {{authToken}}
+Accept: application/json

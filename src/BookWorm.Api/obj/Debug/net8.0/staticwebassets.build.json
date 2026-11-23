@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "85tVtlBcoXO2UX8naj1dZAzRA86NdZ9UQ8gYg/3VVGc=",
+  "Source": "BookWorm.Api",
+  "BasePath": "_content/BookWorm.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}

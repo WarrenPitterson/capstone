@@ -1,0 +1,1597 @@
+openapi: 3.0.3
+info:
+  title: Book Worm API
+  description: E-commerce bookstore backend API for Book Worm.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: Healthy
+
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              password: Password123!
+              firstName: John
+              lastName: Doe
+              phone: '9876543210'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                user:
+                  id: 1
+                  email: user@example.com
+                  firstName: John
+                  lastName: Doe
+                  phone: '9876543210'
+                  giftPointsBalance: 0
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '409':
+          $ref: '#/components/responses/ProblemDetails409'
+
+  /api/auth/login:
+    post:
+      summary: Login with email and password
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: Password123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                user:
+                  id: 1
+                  email: user@example.com
+                  firstName: John
+                  lastName: Doe
+                  phone: '9876543210'
+                  giftPointsBalance: 100
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/categories:
+    get:
+      summary: Get all book categories
+      tags:
+        - Catalogue
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDto'
+              example:
+                - id: 1
+                  name: Romance
+                - id: 2
+                  name: Self-help
+                - id: 3
+                  name: Science Fiction
+
+  /api/publishers:
+    get:
+      summary: Get all publishers (brands)
+      tags:
+        - Catalogue
+      responses:
+        '200':
+          description: List of publishers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublisherDto'
+              example:
+                - id: 1
+                  name: ABC Publishers
+                - id: 2
+                  name: HarperCollins
+
+  /api/books:
+    get:
+      summary: Search and filter catalogue books
+      tags:
+        - Catalogue
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search term for title, author, or description
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+          description: Filter by category ID
+        - name: publisherId
+          in: query
+          schema:
+            type: integer
+          description: Filter by publisher ID
+        - name: language
+          in: query
+          schema:
+            type: string
+          description: Filter by language (e.g. English, Hindi)
+        - name: format
+          in: query
+          schema:
+            $ref: '#/components/schemas/BookFormat'
+          description: Filter by book format
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+            format: decimal
+          description: Minimum price in INR
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+            format: decimal
+          description: Maximum price in INR
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [Relevance, PriceAsc, PriceDesc, Newest, Rating]
+            default: Relevance
+          description: Sorting criteria
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 12
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated book list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBooksResponse'
+
+  /api/books/{id}:
+    get:
+      summary: Get book details by ID
+      tags:
+        - Catalogue
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detailed book information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookDetailDto'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/books/recommended:
+    get:
+      summary: Get recommended books for current user or default recommendations
+      tags:
+        - Catalogue
+      security:
+        - BearerAuth: []
+        - {}
+      responses:
+        '200':
+          description: Recommended books list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookSummaryDto'
+
+  /api/books/bestsellers:
+    get:
+      summary: Get bestsellers this month
+      tags:
+        - Catalogue
+      responses:
+        '200':
+          description: Bestseller books list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookSummaryDto'
+
+  /api/books/new-launches:
+    get:
+      summary: Get new launches
+      tags:
+        - Catalogue
+      responses:
+        '200':
+          description: New launch books list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookSummaryDto'
+
+  /api/books/{id}/reviews:
+    get:
+      summary: Get reviews for a book
+      tags:
+        - Reviews
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of reviews for the book
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewDto'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+    post:
+      summary: Add a review for a book
+      tags:
+        - Reviews
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+            example:
+              rating: 5
+              text: Beautifully written and inspiring guide.
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '409':
+          $ref: '#/components/responses/ProblemDetails409'
+
+  /api/wishlist:
+    get:
+      summary: Get user wishlist
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Wishlist items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookSummaryDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/wishlist/{bookId}:
+    put:
+      summary: Add book to wishlist
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Added to wishlist
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+    delete:
+      summary: Remove book from wishlist
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Removed from wishlist
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/authors/{id}:
+    get:
+      summary: Get author details and other works
+      tags:
+        - Authors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Author details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorDetailDto'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/me/writers:
+    get:
+      summary: Get authors followed by current user (My Writers)
+      tags:
+        - Authors
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of followed authors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthorSummaryDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/me/writers/{authorId}:
+    put:
+      summary: Follow an author
+      tags:
+        - Authors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Followed author successfully
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+    delete:
+      summary: Unfollow an author
+      tags:
+        - Authors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Unfollowed author successfully
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/cart:
+    get:
+      summary: Get current user shopping cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Shopping cart details with pricing breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/cart/items:
+    post:
+      summary: Add an item to cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+            example:
+              bookId: 1
+              quantity: 1
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/cart/items/{bookId}:
+    put:
+      summary: Update cart item quantity
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+            example:
+              quantity: 2
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+    delete:
+      summary: Remove item from cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/cart/coupon:
+    post:
+      summary: Apply coupon code to cart
+      tags:
+        - Cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyCouponRequest'
+            example:
+              couponCode: SAVE100
+      responses:
+        '200':
+          description: Cart with applied coupon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/addresses:
+    get:
+      summary: Get all saved addresses for current user
+      tags:
+        - Addresses
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of saved addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AddressDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+    post:
+      summary: Add a new address
+      tags:
+        - Addresses
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAddressRequest'
+            example:
+              firstName: John
+              lastName: Doe
+              email: john.doe@example.com
+              line1: Flat 402, Green Heights
+              line2: MG Road
+              city: Mumbai
+              pin: '400001'
+              state: Maharashtra
+              country: India
+              phoneCountryCode: '+91'
+              phone: '9876543210'
+              isSaved: true
+      responses:
+        '201':
+          description: Address created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+  /api/addresses/{id}:
+    put:
+      summary: Update an address
+      tags:
+        - Addresses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAddressRequest'
+      responses:
+        '200':
+          description: Address updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+    delete:
+      summary: Delete an address
+      tags:
+        - Addresses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Address deleted
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/orders:
+    get:
+      summary: Get order history for current user
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderSummaryDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+    post:
+      summary: Place order from current cart (Checkout)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            example:
+              addressId: 1
+              giftPointsToRedeem: 50
+              couponCode: SAVE100
+      responses:
+        '201':
+          description: Order placed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '409':
+          $ref: '#/components/responses/ProblemDetails409'
+
+  /api/orders/{id}:
+    get:
+      summary: Get order details by ID
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/orders/{id}/cancel:
+    post:
+      summary: Cancel an order within 48 hours of placement
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '409':
+          $ref: '#/components/responses/ProblemDetails409'
+
+  /api/orders/{id}/buy-again:
+    post:
+      summary: Re-add a past order's items to the user's cart
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Items re-added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+
+  /api/orders/{id}/payments:
+    get:
+      summary: Get payment transactions for an order
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payment records for the order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+    post:
+      summary: Process payment for an order
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessPaymentRequest'
+            example:
+              method: CreditCard
+              cardNumber: '4111111111111234'
+              nameOnCard: John Doe
+              cvv: '123'
+              expiryMonthYear: '12/2028'
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentDto'
+        '400':
+          $ref: '#/components/responses/ProblemDetails400'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+        '404':
+          $ref: '#/components/responses/ProblemDetails404'
+        '409':
+          $ref: '#/components/responses/ProblemDetails409'
+
+  /api/me/gift-points:
+    get:
+      summary: Get gift points balance and transaction history
+      tags:
+        - Gift Points
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Gift points summary and transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GiftPointsSummaryDto'
+        '401':
+          $ref: '#/components/responses/ProblemDetails401'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ProblemDetails400:
+      description: Bad request or validation failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://tools.ietf.org/html/rfc7231#section-6.5.1
+            title: Bad Request
+            status: 400
+            detail: One or more validation errors occurred.
+            errors:
+              Quantity:
+                - Quantity must be greater than or equal to 1.
+    ProblemDetails401:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://tools.ietf.org/html/rfc7235#section-3.1
+            title: Unauthorized
+            status: 401
+            detail: Authentication token is missing or invalid.
+    ProblemDetails404:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://tools.ietf.org/html/rfc7231#section-6.5.4
+            title: Not Found
+            status: 404
+            detail: The requested resource was not found.
+    ProblemDetails409:
+      description: Conflict or business rule violation
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://tools.ietf.org/html/rfc7231#section-6.5.8
+            title: Conflict
+            status: 409
+            detail: Orders can only be cancelled within 48 hours of placement.
+
+  schemas:
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    BookFormat:
+      type: string
+      enum: [Paperback, Hardcover, EBook]
+
+    OrderStatus:
+      type: string
+      enum: [Placed, Cancelled, Shipped, Delivered]
+
+    PaymentMethod:
+      type: string
+      enum: [CreditCard, DebitCard, Upi, Wallet]
+
+    PaymentStatus:
+      type: string
+      enum: [Pending, Succeeded, Failed, Refunded]
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        giftPointsBalance:
+          type: integer
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserDto'
+
+    CategoryDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    PublisherDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    AuthorSummaryDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        bio:
+          type: string
+        photoUrl:
+          type: string
+
+    AuthorDetailDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        bio:
+          type: string
+        photoUrl:
+          type: string
+        otherWorks:
+          type: string
+        books:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookSummaryDto'
+
+    BookSummaryDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        shortDescription:
+          type: string
+        authorName:
+          type: string
+        authorId:
+          type: integer
+        publisherName:
+          type: string
+        categoryName:
+          type: string
+        format:
+          $ref: '#/components/schemas/BookFormat'
+        language:
+          type: string
+        price:
+          type: number
+          format: decimal
+        frontCoverUrl:
+          type: string
+        backCoverUrl:
+          type: string
+        averageRating:
+          type: number
+        copiesSold:
+          type: integer
+        isNewLaunch:
+          type: boolean
+        genreTags:
+          type: array
+          items:
+            type: string
+        estimatedDeliveryDate:
+          type: string
+          format: date-time
+
+    BookDetailDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        author:
+          $ref: '#/components/schemas/AuthorSummaryDto'
+        publisher:
+          $ref: '#/components/schemas/PublisherDto'
+        category:
+          $ref: '#/components/schemas/CategoryDto'
+        format:
+          $ref: '#/components/schemas/BookFormat'
+        language:
+          type: string
+        price:
+          type: number
+          format: decimal
+        isbn:
+          type: string
+        frontCoverUrl:
+          type: string
+        backCoverUrl:
+          type: string
+        averageRating:
+          type: number
+        copiesSold:
+          type: integer
+        stockQuantity:
+          type: integer
+        isNewLaunch:
+          type: boolean
+        genreTags:
+          type: array
+          items:
+            type: string
+        estimatedDeliveryDate:
+          type: string
+          format: date-time
+        relatedReads:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookSummaryDto'
+
+    PaginatedBooksResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookSummaryDto'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+
+    ReviewDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookId:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateReviewRequest:
+      type: object
+      required:
+        - rating
+        - text
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+          maxLength: 100
+
+    CartItemDto:
+      type: object
+      properties:
+        bookId:
+          type: integer
+        title:
+          type: string
+        authorName:
+          type: string
+        format:
+          $ref: '#/components/schemas/BookFormat'
+        price:
+          type: number
+          format: decimal
+        quantity:
+          type: integer
+        frontCoverUrl:
+          type: string
+        genreTags:
+          type: array
+          items:
+            type: string
+        estimatedDeliveryDate:
+          type: string
+          format: date-time
+        lineTotal:
+          type: number
+          format: decimal
+
+    CartDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemDto'
+        subtotal:
+          type: number
+          format: decimal
+        tax:
+          type: number
+          format: decimal
+        deliveryCharge:
+          type: number
+          format: decimal
+        couponCode:
+          type: string
+          nullable: true
+        discount:
+          type: number
+          format: decimal
+        total:
+          type: number
+          format: decimal
+
+    AddCartItemRequest:
+      type: object
+      required:
+        - bookId
+        - quantity
+      properties:
+        bookId:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+
+    ApplyCouponRequest:
+      type: object
+      required:
+        - couponCode
+      properties:
+        couponCode:
+          type: string
+
+    AddressDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        line1:
+          type: string
+        line2:
+          type: string
+        city:
+          type: string
+        pin:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        phoneCountryCode:
+          type: string
+        phone:
+          type: string
+        isSaved:
+          type: boolean
+
+    CreateAddressRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - line1
+        - city
+        - pin
+        - state
+        - country
+        - phone
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        line1:
+          type: string
+        line2:
+          type: string
+        city:
+          type: string
+        pin:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        phoneCountryCode:
+          type: string
+          default: '+91'
+        phone:
+          type: string
+        isSaved:
+          type: boolean
+          default: false
+
+    CreateOrderRequest:
+      type: object
+      properties:
+        addressId:
+          type: integer
+          description: ID of a saved address (or supply newAddress)
+        newAddress:
+          $ref: '#/components/schemas/CreateAddressRequest'
+        giftPointsToRedeem:
+          type: integer
+          minimum: 0
+          default: 0
+        couponCode:
+          type: string
+
+    OrderItemDto:
+      type: object
+      properties:
+        bookId:
+          type: integer
+        title:
+          type: string
+        authorName:
+          type: string
+        frontCoverUrl:
+          type: string
+        format:
+          $ref: '#/components/schemas/BookFormat'
+        unitPrice:
+          type: number
+          format: decimal
+        quantity:
+          type: integer
+        lineTotal:
+          type: number
+          format: decimal
+        estimatedDeliveryDate:
+          type: string
+          format: date-time
+
+    OrderSummaryDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        placedAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        total:
+          type: number
+          format: decimal
+        itemCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemDto'
+
+    OrderDetailDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        address:
+          $ref: '#/components/schemas/AddressDto'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        subtotal:
+          type: number
+          format: decimal
+        tax:
+          type: number
+          format: decimal
+        deliveryCharge:
+          type: number
+          format: decimal
+        couponCode:
+          type: string
+          nullable: true
+        discount:
+          type: number
+          format: decimal
+        giftPointsRedeemed:
+          type: integer
+        total:
+          type: number
+          format: decimal
+        placedAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemDto'
+        payment:
+          $ref: '#/components/schemas/PaymentDto'
+
+    ProcessPaymentRequest:
+      type: object
+      required:
+        - method
+      properties:
+        method:
+          $ref: '#/components/schemas/PaymentMethod'
+        cardNumber:
+          type: string
+        nameOnCard:
+          type: string
+        cvv:
+          type: string
+        expiryMonthYear:
+          type: string
+        upiId:
+          type: string
+        walletName:
+          type: string
+
+    PaymentDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        method:
+          $ref: '#/components/schemas/PaymentMethod'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        last4:
+          type: string
+          nullable: true
+        amount:
+          type: number
+          format: decimal
+        transactionReference:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    GiftPointTransactionDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        points:
+          type: integer
+        reason:
+          type: string
+        orderId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    GiftPointsSummaryDto:
+      type: object
+      properties:
+        balance:
+          type: integer
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GiftPointTransactionDto'

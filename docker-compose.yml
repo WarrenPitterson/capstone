@@ -1,0 +1,34 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bookworm-db
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-23412adfasASD}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "${MSSQL_PORT:-1433}:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bookworm-api
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DatabaseConnectionString: "Server=db,1433;Database=Capstone;User Id=SA;Password=${MSSQL_SA_PASSWORD:-23412adfasASD};TrustServerCertificate=True"
+      ConnectionStrings__Default: "Server=db,1433;Database=Capstone;User Id=SA;Password=${MSSQL_SA_PASSWORD:-23412adfasASD};TrustServerCertificate=True"
+      Jwt__Secret: "${JWT_SECRET:-BookWormSuperSecretDevelopmentKeyMustBeAtLeast32BytesLong!}"
+      Jwt__Issuer: "${JWT_ISSUER:-BookWorm}"
+      Jwt__Audience: "${JWT_AUDIENCE:-BookWormUsers}"
+    ports:
+      - "${API_PORT:-5000}:5000"
+
+volumes:
+  mssqldata:
